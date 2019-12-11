@@ -1,6 +1,7 @@
 package org.mule.tooling.runtime.launcher.configuration.runner;
 
-import org.codehaus.plexus.util.FileUtils;
+//import org.codehaus.plexus.util.FileUtils;
+import org.apache.commons.io.FileUtils;
 import org.jetbrains.annotations.NotNull;
 import org.mule.tooling.runtime.util.MuleDirectoriesUtils;
 
