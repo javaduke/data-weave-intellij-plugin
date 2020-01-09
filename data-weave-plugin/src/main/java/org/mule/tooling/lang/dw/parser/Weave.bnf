@@ -166,7 +166,7 @@ NamespaceDefinition::=Identifier NAMESPACE_URI
 
 VariableDirective::= 'var' VariableDefinition {pin=1}
 
-OutputDirective::= OUTPUT_DIRECTIVE_KEYWORD (":" Type)? DataFormat Options? {pin=1}
+OutputDirective::= OUTPUT_DIRECTIVE_KEYWORD (":" Type)? ((DataFormat ('with' Identifier)?) | Identifier) Options? {pin=1}
 
 TypeDirective::= 'type' TypeDefinition {pin=1}
 
@@ -194,7 +194,7 @@ Schema::= '{' ( SchemaElement ( ',' SchemaElement )* )? '}' {pin = 1}
 
 SchemaElement::= (Identifier | StringLiteral) ':' Expression {pin = 2}
 
-InputDirective::= 'input' VariableNameTypeDefinition DataFormat Options? {pin=1}
+InputDirective::= 'input' VariableNameTypeDefinition (DataFormat | Identifier) Options? {pin=1}
 
 Options::= OptionElement ( ',' OptionElement )*
 
@@ -360,7 +360,7 @@ DynamicSingleKeyValuePair ::= (Attributes)? ':' Expression
 //Selectors
 DotSelectorExpression ::=Expression ( '..' | '.' ) Selector? ('!'| '?')? {pin=2}
 
-BracketSelectorExpression::=Expression '[' (('?' |'@' | '&' | '^' |'*')?  (Expression ))  ']' ('!'| '?')?
+BracketSelectorExpression::=Expression '[' (('?' |'@' | '&' | '^' |'*')? ('*' | '@')?  (Expression ))  ']' ('!'| '?')?
 
 MatchExpression ::= Expression 'match' (PatternMatcherExpression )
 
@@ -368,11 +368,11 @@ UpdateExpression ::= Expression 'update' (UpdateCases)
 
 UpdateCases ::= '{' ('case' UpdateCase)+ '}' {pin = 2}
 
-UpdateCase ::= ((Identifier | '(' Identifier ',' Identifier ')') 'at')? UpdateSelector (IF EnclosedExpression)? '->' Expression  {
+UpdateCase ::= ((Identifier | '(' Identifier ',' Identifier ')') 'at')? UpdateSelector ('!')? (IF EnclosedExpression)? '->' Expression  {
     pin = 4
 }
 
-private UpdateSelector ::= (('.' (ValueSelector | MultiValueSelector | AttributeSelector)) | '[' NumberLiteral ']') (UpdateSelector)*
+private UpdateSelector ::= (('.' (ValueSelector | MultiValueSelector | AttributeSelector)) | '[' Expression ']') (UpdateSelector)*
 
 
 PatternMatcherExpression ::= '{' ('case' Pattern)+ (DefaultPattern)? '}' {pin = 2}
@@ -440,7 +440,7 @@ NamedRegexPattern ::= Identifier 'matches' RegexLiteral '->' Expression {
     pin = 4
 }
 
-DefaultPattern ::= ELSE '->' Expression {pin=1}
+DefaultPattern ::= ELSE (Identifier)? '->' Expression {pin=1}
 
 Selector ::= (ValueSelector |
          AllAttributeSelector |
@@ -449,23 +449,35 @@ Selector ::= (ValueSelector |
          AllSchemaSelector |
          SchemaSelector |
          ObjectSelector |
+         AttributeMultiValueSelector|
          MultiValueSelector)
 
-ValueSelector ::= (DeclaredNamespace? (StringLiteral|Identifier))
+ValueSelector ::= fieldSelector
 
 AllAttributeSelector ::=AT_SPACE  {pin=1}
 
 AllSchemaSelector ::=CARET_SPACE  {pin=1}
 
-AttributeSelector ::='@'(DeclaredNamespace? (StringLiteral|Identifier))? {pin=1}
+AttributeSelector ::='@'fieldSelector? {pin=1}
 
-ObjectSelector ::='&'(DeclaredNamespace? (StringLiteral|Identifier))?  {pin=1}
+ObjectSelector ::='&'fieldSelector?  {pin=1}
 
-SchemaSelector ::='^'(DeclaredNamespace? (StringLiteral|Identifier))?  {pin=1}
+SchemaSelector ::='^'fieldSelector?  {pin=1}
 
 NamespaceSelector ::='#'
 
-MultiValueSelector ::= '*'(DeclaredNamespace? (StringLiteral|Identifier))  {pin=1}
+AttributeMultiValueSelector ::= multiAttributeSelector | multiAttributeSelectorOld
+
+private multiAttributeSelectorOld ::= '@' '*' fieldSelector {pin=2}
+
+private multiAttributeSelector ::= '*''@'fieldSelector {pin=2}
+
+
+private fieldSelector ::= DeclaredNamespace? (StringLiteral|Identifier)
+
+
+
+MultiValueSelector ::= '*'fieldSelector  {pin=1}
 
 VariableReferenceExpression ::= FqnIdentifier
 

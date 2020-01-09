@@ -1,8 +1,11 @@
 package org.mule.tooling.lang.dw.service;
 
 import com.intellij.openapi.Disposable;
-import com.intellij.openapi.application.*;
-import com.intellij.openapi.components.AbstractProjectComponent;
+import com.intellij.openapi.application.Application;
+import com.intellij.openapi.application.ApplicationManager;
+import com.intellij.openapi.application.ReadAction;
+import com.intellij.openapi.application.WriteAction;
+import com.intellij.openapi.components.ProjectComponent;
 import com.intellij.openapi.diagnostic.Logger;
 import com.intellij.openapi.module.Module;
 import com.intellij.openapi.module.ModuleUtil;
@@ -32,10 +35,7 @@ import org.mule.weave.v2.debugger.event.WeaveTypeEntry;
 import org.mule.weave.v2.editor.ImplicitInput;
 import org.mule.weave.v2.ts.AnyType;
 import org.mule.weave.v2.ts.WeaveType;
-import scala.Predef;
 import scala.Tuple2;
-import scala.collection.JavaConverters;
-
 
 import java.io.File;
 import java.io.IOException;
@@ -48,7 +48,7 @@ import java.util.stream.Collectors;
 
 import static org.mule.tooling.lang.dw.parser.psi.WeavePsiUtils.getWeaveDocument;
 
-public class WeaveRuntimeContextManager extends AbstractProjectComponent implements Disposable {
+public class WeaveRuntimeContextManager implements ProjectComponent, Disposable {
 
     private static final Logger LOG = Logger.getInstance(WeaveRuntimeContextManager.class);
 
@@ -60,10 +60,11 @@ public class WeaveRuntimeContextManager extends AbstractProjectComponent impleme
     private String[] modules = new String[0];
 
     private List<StatusChangeListener> listeners = new ArrayList<>();
+    private Project myProject;
 
 
     protected WeaveRuntimeContextManager(Project project) {
-        super(project);
+        myProject = project;
     }
 
     public static WeaveRuntimeContextManager getInstance(Project myProject) {
@@ -83,8 +84,6 @@ public class WeaveRuntimeContextManager extends AbstractProjectComponent impleme
 
     @Override
     public void initComponent() {
-        super.initComponent();
-
         WeaveAgentRuntimeManager.getInstance(myProject).addStatusListener(() -> {
             WeaveAgentRuntimeManager.getInstance(myProject).dataFormats((dataFormatEvent) -> {
                 dataFormat = dataFormatEvent.formats();
@@ -100,7 +99,6 @@ public class WeaveRuntimeContextManager extends AbstractProjectComponent impleme
             });
         });
 
-        //TODO = are we mixing read and write actions?
         PsiManager.getInstance(myProject).addPsiTreeChangeListener(new PsiTreeChangeAdapter() {
             @Override
             public void childReplaced(@NotNull PsiTreeChangeEvent event) {
@@ -171,19 +169,6 @@ public class WeaveRuntimeContextManager extends AbstractProjectComponent impleme
         } else {
             app.invokeLater(r);
         }
-
-
-//        Runnable action = new Runnable() {
-//            @Override
-//            public void run() {
-//            }
-//        };
-//
-//        action.run();
-        //else {
-        //    app.invokeAndWait(action, ModalityState.any());
-        //app.invokeAndWait(action, ModalityState.current());
-        //}
     }
 
     @NotNull
@@ -360,7 +345,10 @@ public class WeaveRuntimeContextManager extends AbstractProjectComponent impleme
         return scenario;
     }
 
-    public List<Scenario> getScenariosFor(VirtualFile file) {
+    public List<Scenario> getScenariosFor(@Nullable VirtualFile file) {
+        if (file == null) {
+            return Collections.emptyList();
+        }
         PsiFile psiFile = PsiManager.getInstance(myProject).findFile(file);
         if (psiFile != null) {
             final WeaveDocument weaveDocument = WeavePsiUtils.getWeaveDocument(psiFile);
@@ -418,6 +406,7 @@ public class WeaveRuntimeContextManager extends AbstractProjectComponent impleme
         return null;
     }
 
+    @Nullable
     public VirtualFile findOrCreateMappingTestFolder(PsiFile psiFile) {
         VirtualFile testFolder = findMappingTestFolder(psiFile);
         if (testFolder == null) {
@@ -430,6 +419,9 @@ public class WeaveRuntimeContextManager extends AbstractProjectComponent impleme
     @Nullable
     public Scenario createScenario(PsiFile psiFile, String scenarioName) {
         VirtualFile testFolder = findOrCreateMappingTestFolder(psiFile);
+        if (testFolder == null) {
+            return null;
+        }
         try {
             VirtualFile scenarioFolder = WriteAction.compute(() -> testFolder.createChildDirectory(this, scenarioName));
             Scenario scenario = new Scenario(scenarioFolder);
@@ -441,7 +433,7 @@ public class WeaveRuntimeContextManager extends AbstractProjectComponent impleme
                 return null;
             }
         } catch (IOException e) {
-            e.printStackTrace();
+            LOG.error(e);
             return null;
         }
     }
@@ -450,19 +442,43 @@ public class WeaveRuntimeContextManager extends AbstractProjectComponent impleme
     public VirtualFile createMappingTestFolder(PsiFile weaveFile) {
         return WriteAction.compute(() -> {
             try {
-                //TODO: handle creation of dwit folder
                 VirtualFile dwitFolder = getScenariosRootFolder(weaveFile);
-
-                WeaveDocument document = WeavePsiUtils.getWeaveDocument(weaveFile);
+                if (dwitFolder == null) {
+                    //See if "src/test/dwit exists, if not, create it
+                    final Module module = ModuleUtil.findModuleForFile(weaveFile.getVirtualFile(), weaveFile.getProject());
+                    if (module == null) {
+                        return null;
+                    }
+                    final ModuleRootManager rootManager = ModuleRootManager.getInstance(module);
+                    VirtualFile moduleRoot = rootManager.getContentRoots()[0].findChild("src");
+                    if (moduleRoot == null) {
+                        return null;
+                    }
+                    //Create it here
+                    VirtualFile testFolder = moduleRoot.findChild(WeaveConstants.TEST_BASE_FOLDER_NAME);
+                    if (testFolder == null) {
+                        testFolder = moduleRoot.createChildDirectory(this, WeaveConstants.TEST_BASE_FOLDER_NAME);
+                    } else if (!testFolder.isDirectory()) {
+                        return null;
+                    }
+                    dwitFolder = testFolder.createChildDirectory(this, WeaveConstants.INTEGRATION_TEST_FOLDER_NAME);
+                    ModifiableRootModel model = ModuleRootManager.getInstance(module).getModifiableModel();
+                    ContentEntry[] entries = model.getContentEntries();
+                    for (ContentEntry entry : entries) {
+                        if (Objects.equals(entry.getFile(), moduleRoot))
+                            entry.addSourceFolder(dwitFolder, true);
+                    }
+                    model.commit();
+                }
+                final WeaveDocument document = WeavePsiUtils.getWeaveDocument(weaveFile);
                 if (document != null) {
                     String qName = document.getQualifiedName();
                     return dwitFolder.createChildDirectory(this, qName);
-
                 } else {
-
                     return null;
                 }
             } catch (IOException e) {
+                LOG.error(e);
                 return null;
             }
         });
@@ -506,12 +522,9 @@ public class WeaveRuntimeContextManager extends AbstractProjectComponent impleme
 
     public interface StatusChangeListener {
         default void onDataFormatLoaded(WeaveDataFormatDescriptor[] dataFormatDescriptor) {
-
         }
 
         default void onModulesLoaded(String[] modules) {
-
         }
-
     }
 }

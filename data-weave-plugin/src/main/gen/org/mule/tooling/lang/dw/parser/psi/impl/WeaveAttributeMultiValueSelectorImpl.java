@@ -8,16 +8,17 @@ import com.intellij.psi.PsiElement;
 import com.intellij.psi.PsiElementVisitor;
 import com.intellij.psi.util.PsiTreeUtil;
 import static org.mule.tooling.lang.dw.parser.psi.WeaveTypes.*;
+import com.intellij.extapi.psi.ASTWrapperPsiElement;
 import org.mule.tooling.lang.dw.parser.psi.*;
 
-public class WeaveOutputDirectiveImpl extends WeaveDirectiveImpl implements WeaveOutputDirective {
+public class WeaveAttributeMultiValueSelectorImpl extends ASTWrapperPsiElement implements WeaveAttributeMultiValueSelector {
 
-  public WeaveOutputDirectiveImpl(@NotNull ASTNode node) {
+  public WeaveAttributeMultiValueSelectorImpl(@NotNull ASTNode node) {
     super(node);
   }
 
   public void accept(@NotNull WeaveVisitor visitor) {
-    visitor.visitOutputDirective(this);
+    visitor.visitAttributeMultiValueSelector(this);
   }
 
   public void accept(@NotNull PsiElementVisitor visitor) {
@@ -27,8 +28,8 @@ public class WeaveOutputDirectiveImpl extends WeaveDirectiveImpl implements Weav
 
   @Override
   @Nullable
-  public WeaveDataFormat getDataFormat() {
-    return findChildByClass(WeaveDataFormat.class);
+  public WeaveDeclaredNamespace getDeclaredNamespace() {
+    return findChildByClass(WeaveDeclaredNamespace.class);
   }
 
   @Override
@@ -39,14 +40,8 @@ public class WeaveOutputDirectiveImpl extends WeaveDirectiveImpl implements Weav
 
   @Override
   @Nullable
-  public WeaveOptions getOptions() {
-    return findChildByClass(WeaveOptions.class);
-  }
-
-  @Override
-  @Nullable
-  public WeaveType getType() {
-    return findChildByClass(WeaveType.class);
+  public WeaveStringLiteral getStringLiteral() {
+    return findChildByClass(WeaveStringLiteral.class);
   }
 
 }
