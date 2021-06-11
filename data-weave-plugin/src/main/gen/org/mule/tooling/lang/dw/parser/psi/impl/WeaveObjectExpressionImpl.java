@@ -17,10 +17,12 @@ public class WeaveObjectExpressionImpl extends WeaveExpressionImpl implements We
     super(node);
   }
 
+  @Override
   public void accept(@NotNull WeaveVisitor visitor) {
     visitor.visitObjectExpression(this);
   }
 
+  @Override
   public void accept(@NotNull PsiElementVisitor visitor) {
     if (visitor instanceof WeaveVisitor) accept((WeaveVisitor)visitor);
     else super.accept(visitor);
@@ -30,6 +32,12 @@ public class WeaveObjectExpressionImpl extends WeaveExpressionImpl implements We
   @NotNull
   public List<WeaveDynamicKeyValuePair> getDynamicKeyValuePairList() {
     return PsiTreeUtil.getChildrenOfTypeAsList(this, WeaveDynamicKeyValuePair.class);
+  }
+
+  @Override
+  @Nullable
+  public WeaveExpression getExpression() {
+    return findChildByClass(WeaveExpression.class);
   }
 
   @Override

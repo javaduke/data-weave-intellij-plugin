@@ -10,6 +10,7 @@ import com.intellij.psi.util.PsiTreeUtil;
 import static org.mule.tooling.lang.dw.parser.psi.WeaveTypes.*;
 import org.mule.tooling.lang.dw.parser.psi.WeaveNamedElementImpl;
 import org.mule.tooling.lang.dw.parser.psi.*;
+import javax.swing.Icon;
 
 public class WeaveAnnotationDefinitionImpl extends WeaveNamedElementImpl implements WeaveAnnotationDefinition {
 
@@ -21,6 +22,7 @@ public class WeaveAnnotationDefinitionImpl extends WeaveNamedElementImpl impleme
     visitor.visitAnnotationDefinition(this);
   }
 
+  @Override
   public void accept(@NotNull PsiElementVisitor visitor) {
     if (visitor instanceof WeaveVisitor) accept((WeaveVisitor)visitor);
     else super.accept(visitor);
@@ -36,6 +38,11 @@ public class WeaveAnnotationDefinitionImpl extends WeaveNamedElementImpl impleme
   @NotNull
   public WeaveIdentifier getIdentifier() {
     return findNotNullChildByClass(WeaveIdentifier.class);
+  }
+
+  @Override
+  public Icon getElementIcon(int flags) {
+    return WeavePsiImplUtils.getElementIcon(this, flags);
   }
 
 }

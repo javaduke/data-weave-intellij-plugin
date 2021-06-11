@@ -28,12 +28,12 @@ DOT="."
 LINE_COMMENT = "//" [^\r\n]*
 MULTILINE_COMMENT = "/*" ( ([^"*"]|[\r\n])* ("*"+ [^"*""/"] )? )* ("*" | "*"+"/")?
 
-DOUBLE_QUOTED_STRING=\"([^\\\"\r\n]|\\[^\r\n])*\"?
-SINGLE_QUOTED_STRING='([^\\'\r\n]|\\[^\r\n])*'?
-BACKTIKED_QUOTED_STRING=`([^\\`\r\n]|\\[^\r\n])*`?
+DOUBLE_QUOTED_STRING=\"([^\\\"]|\\[^\r\n])*\"?
+SINGLE_QUOTED_STRING='([^\\']|\\[^\r\n])*'?
+BACKTIKED_QUOTED_STRING=`([^\\`]|\\[^\r\n])*`?
 
 
-RULE_MIME_TYPE=("text"|"audio"|"video"|"application"|"multipart"|"image") "/"[a-zA-Z\-_]+
+RULE_MIME_TYPE=("text"|"audio"|"video"|"application"|"multipart"|"image") "/"[a-zA-Z\-_\.+0-9]+
 
 NAMESPACE_URI=[a-z]+"://"[a-zA-Z0-9/:\.\-_?=&]+ | "urn:"[a-zA-Z0-9:\-_\.?=&]+
 

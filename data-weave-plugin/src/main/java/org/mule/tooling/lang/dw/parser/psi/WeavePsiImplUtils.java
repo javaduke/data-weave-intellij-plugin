@@ -4,12 +4,15 @@ import com.intellij.icons.AllIcons;
 import com.intellij.navigation.ItemPresentation;
 import com.intellij.psi.PsiFile;
 import com.intellij.psi.PsiReference;
+import com.intellij.util.PlatformIcons;
 import org.jetbrains.annotations.NotNull;
 import org.jetbrains.annotations.Nullable;
 import org.mule.tooling.lang.dw.WeaveFileType;
 import org.mule.tooling.lang.dw.WeaveIcons;
+import org.mule.tooling.lang.dw.qn.WeaveQualifiedNameProvider;
 import org.mule.tooling.lang.dw.reference.WeaveIdentifierPsiReference;
 import org.mule.tooling.lang.dw.reference.WeaveModuleReferenceSet;
+import org.mule.tooling.lang.dw.structure.WeaveFunctionDirectiveView;
 import org.mule.tooling.lang.dw.util.VirtualFileSystemUtils;
 import org.mule.weave.v2.parser.ast.variables.NameIdentifier;
 
@@ -36,7 +39,47 @@ public class WeavePsiImplUtils {
 
             @Override
             public Icon getIcon(boolean b) {
-                return WeaveIcons.WeaveFileType;
+                return WeaveIcons.DataWeaveModuleIcon;
+            }
+        };
+    }
+
+    public static Icon getElementIcon(WeaveDocument document, final int flags) {
+        return document.isMappingDocument() ? WeaveIcons.DataWeaveMappingIcon : WeaveIcons.DataWeaveModuleIcon;
+    }
+
+    public static Icon getElementIcon(WeaveFunctionDefinition functionDefinition, final int flags) {
+        return PlatformIcons.FUNCTION_ICON;
+    }
+
+    public static Icon getElementIcon(WeaveVariableDefinition functionDefinition, final int flags) {
+        return PlatformIcons.VARIABLE_ICON;
+    }
+
+    public static Icon getElementIcon(WeaveTypeDefinition functionDefinition, final int flags) {
+        return PlatformIcons.CLASS_ICON;
+    }
+
+    public static Icon getElementIcon(WeaveAnnotationDefinition functionDefinition, final int flags) {
+        return PlatformIcons.ANNOTATION_TYPE_ICON;
+    }
+
+    public static ItemPresentation getPresentation(WeaveFunctionDefinition functionDefinition) {
+        return new ItemPresentation() {
+
+            @Override
+            public String getPresentableText() {
+                return WeaveFunctionDirectiveView.getFunctionLabel(functionDefinition);
+            }
+
+            @Override
+            public String getLocationString() {
+                return new WeaveQualifiedNameProvider().getQualifiedName(functionDefinition.getParent());
+            }
+
+            @Override
+            public Icon getIcon(boolean b) {
+                return PlatformIcons.FUNCTION_ICON;
             }
         };
     }
@@ -170,23 +213,18 @@ public class WeavePsiImplUtils {
     }
 
 
-    public static String getPath(WeaveModuleReference moduleReference) {
+    public static String getPath(WeaveFqnIdentifier moduleReference) {
         WeaveContainerModuleIdentifier identifierPackage = moduleReference.getContainerModuleIdentifier();
         return identifierPackage.getIdentifierList().stream().map(WeaveIdentifier::getName).collect(Collectors.joining("/")) + "/" + moduleReference.getIdentifier().getName() + "." + WeaveFileType.WeaveFileExtension;
     }
 
-    public static String getModuleFQN(WeaveModuleReference moduleReference) {
+    public static String getModuleFQN(WeaveFqnIdentifier moduleReference) {
         WeaveContainerModuleIdentifier identifierPackage = moduleReference.getContainerModuleIdentifier();
         if (identifierPackage.getText().trim().isEmpty()) {
             return moduleReference.getIdentifier().getName();
         } else {
             return identifierPackage.getText() + moduleReference.getIdentifier().getName();
         }
-    }
-
-    @NotNull
-    public static PsiReference[] getReferences(WeaveModuleReference importDirective) {
-        return new WeaveModuleReferenceSet(importDirective, importDirective.getModuleFQN()).getAllReferences();
     }
 
     public static PsiReference[] getReferences(WeaveBinaryFunctionIdentifier identifier) {

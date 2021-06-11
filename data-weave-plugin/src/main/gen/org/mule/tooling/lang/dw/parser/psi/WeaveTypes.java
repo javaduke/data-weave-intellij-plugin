@@ -37,6 +37,7 @@ public interface WeaveTypes {
   IElementType CLOSE_OBJECT_TYPE = new WeaveElementType("CLOSE_OBJECT_TYPE");
   IElementType CLOSE_ORDERED_OBJECT_TYPE = new WeaveElementType("CLOSE_ORDERED_OBJECT_TYPE");
   IElementType CONDITIONAL_EXPRESSION = new WeaveElementType("CONDITIONAL_EXPRESSION");
+  IElementType CONDITIONAL_SCHEMA_KV = new WeaveElementType("CONDITIONAL_SCHEMA_KV");
   IElementType CONTAINER_MODULE_IDENTIFIER = new WeaveElementType("CONTAINER_MODULE_IDENTIFIER");
   IElementType CUSTOM_INTERPOLATION_STRING = new WeaveElementType("CUSTOM_INTERPOLATION_STRING");
   IElementType CUSTOM_INTERPOLATOR_EXPRESSION = new WeaveElementType("CUSTOM_INTERPOLATOR_EXPRESSION");
@@ -70,7 +71,9 @@ public interface WeaveTypes {
   IElementType HEADER = new WeaveElementType("HEADER");
   IElementType IDENTIFIER = new WeaveElementType("IDENTIFIER");
   IElementType IMPORTED_ELEMENT = new WeaveElementType("IMPORTED_ELEMENT");
+  IElementType IMPORTED_ELEMENT_ALIAS = new WeaveElementType("IMPORTED_ELEMENT_ALIAS");
   IElementType IMPORT_DIRECTIVE = new WeaveElementType("IMPORT_DIRECTIVE");
+  IElementType INPUT_DATA_FORMAT = new WeaveElementType("INPUT_DATA_FORMAT");
   IElementType INPUT_DIRECTIVE = new WeaveElementType("INPUT_DIRECTIVE");
   IElementType INTERSECTION_TYPE = new WeaveElementType("INTERSECTION_TYPE");
   IElementType IS_EXPRESSION = new WeaveElementType("IS_EXPRESSION");
@@ -84,8 +87,8 @@ public interface WeaveTypes {
   IElementType LEFT_SHIFT_EXPRESSION = new WeaveElementType("LEFT_SHIFT_EXPRESSION");
   IElementType LITERAL_EXPRESSION = new WeaveElementType("LITERAL_EXPRESSION");
   IElementType LITERAL_PATTERN = new WeaveElementType("LITERAL_PATTERN");
+  IElementType LITERAL_TYPE = new WeaveElementType("LITERAL_TYPE");
   IElementType MATCH_EXPRESSION = new WeaveElementType("MATCH_EXPRESSION");
-  IElementType MODULE_REFERENCE = new WeaveElementType("MODULE_REFERENCE");
   IElementType MULTIPLICATION_DIVISION_EXPRESSION = new WeaveElementType("MULTIPLICATION_DIVISION_EXPRESSION");
   IElementType MULTI_VALUE_SELECTOR = new WeaveElementType("MULTI_VALUE_SELECTOR");
   IElementType NAMED_LITERAL_PATTERN = new WeaveElementType("NAMED_LITERAL_PATTERN");
@@ -117,6 +120,7 @@ public interface WeaveTypes {
   IElementType RIGHT_SHIFT_EXPRESSION = new WeaveElementType("RIGHT_SHIFT_EXPRESSION");
   IElementType SCHEMA = new WeaveElementType("SCHEMA");
   IElementType SCHEMA_ELEMENT = new WeaveElementType("SCHEMA_ELEMENT");
+  IElementType SCHEMA_KV = new WeaveElementType("SCHEMA_KV");
   IElementType SCHEMA_SELECTOR = new WeaveElementType("SCHEMA_SELECTOR");
   IElementType SELECTOR = new WeaveElementType("SELECTOR");
   IElementType SIMPLE_ATTRIBUTE = new WeaveElementType("SIMPLE_ATTRIBUTE");
@@ -306,6 +310,9 @@ public interface WeaveTypes {
       else if (type == CONDITIONAL_EXPRESSION) {
         return new WeaveConditionalExpressionImpl(node);
       }
+      else if (type == CONDITIONAL_SCHEMA_KV) {
+        return new WeaveConditionalSchemaKVImpl(node);
+      }
       else if (type == CONTAINER_MODULE_IDENTIFIER) {
         return new WeaveContainerModuleIdentifierImpl(node);
       }
@@ -402,8 +409,14 @@ public interface WeaveTypes {
       else if (type == IMPORTED_ELEMENT) {
         return new WeaveImportedElementImpl(node);
       }
+      else if (type == IMPORTED_ELEMENT_ALIAS) {
+        return new WeaveImportedElementAliasImpl(node);
+      }
       else if (type == IMPORT_DIRECTIVE) {
         return new WeaveImportDirectiveImpl(node);
+      }
+      else if (type == INPUT_DATA_FORMAT) {
+        return new WeaveInputDataFormatImpl(node);
       }
       else if (type == INPUT_DIRECTIVE) {
         return new WeaveInputDirectiveImpl(node);
@@ -441,11 +454,11 @@ public interface WeaveTypes {
       else if (type == LITERAL_PATTERN) {
         return new WeaveLiteralPatternImpl(node);
       }
+      else if (type == LITERAL_TYPE) {
+        return new WeaveLiteralTypeImpl(node);
+      }
       else if (type == MATCH_EXPRESSION) {
         return new WeaveMatchExpressionImpl(node);
-      }
-      else if (type == MODULE_REFERENCE) {
-        return new WeaveModuleReferenceImpl(node);
       }
       else if (type == MULTIPLICATION_DIVISION_EXPRESSION) {
         return new WeaveMultiplicationDivisionExpressionImpl(node);
@@ -536,6 +549,9 @@ public interface WeaveTypes {
       }
       else if (type == SCHEMA_ELEMENT) {
         return new WeaveSchemaElementImpl(node);
+      }
+      else if (type == SCHEMA_KV) {
+        return new WeaveSchemaKVImpl(node);
       }
       else if (type == SCHEMA_SELECTOR) {
         return new WeaveSchemaSelectorImpl(node);

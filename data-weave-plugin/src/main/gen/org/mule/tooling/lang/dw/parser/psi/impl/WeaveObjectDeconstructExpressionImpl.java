@@ -16,13 +16,21 @@ public class WeaveObjectDeconstructExpressionImpl extends WeaveExpressionImpl im
     super(node);
   }
 
+  @Override
   public void accept(@NotNull WeaveVisitor visitor) {
     visitor.visitObjectDeconstructExpression(this);
   }
 
+  @Override
   public void accept(@NotNull PsiElementVisitor visitor) {
     if (visitor instanceof WeaveVisitor) accept((WeaveVisitor)visitor);
     else super.accept(visitor);
+  }
+
+  @Override
+  @Nullable
+  public WeaveDynamicKeyValuePair getDynamicKeyValuePair() {
+    return findChildByClass(WeaveDynamicKeyValuePair.class);
   }
 
   @Override
@@ -32,9 +40,9 @@ public class WeaveObjectDeconstructExpressionImpl extends WeaveExpressionImpl im
   }
 
   @Override
-  @NotNull
+  @Nullable
   public WeaveKeyValuePair getKeyValuePair() {
-    return findNotNullChildByClass(WeaveKeyValuePair.class);
+    return findChildByClass(WeaveKeyValuePair.class);
   }
 
 }

@@ -118,6 +118,10 @@ public class WeaveVisitor extends PsiElementVisitor {
     visitExpression(o);
   }
 
+  public void visitConditionalSchemaKV(@NotNull WeaveConditionalSchemaKV o) {
+    visitPsiElement(o);
+  }
+
   public void visitContainerModuleIdentifier(@NotNull WeaveContainerModuleIdentifier o) {
     visitPsiElement(o);
   }
@@ -254,11 +258,20 @@ public class WeaveVisitor extends PsiElementVisitor {
   }
 
   public void visitImportedElement(@NotNull WeaveImportedElement o) {
+    visitNamedElement(o);
+  }
+
+  public void visitImportedElementAlias(@NotNull WeaveImportedElementAlias o) {
+    visitPsiElement(o);
+  }
+
+  public void visitInputDataFormat(@NotNull WeaveInputDataFormat o) {
     visitPsiElement(o);
   }
 
   public void visitInputDirective(@NotNull WeaveInputDirective o) {
     visitDirective(o);
+    // visitNamedElement(o);
   }
 
   public void visitIntersectionType(@NotNull WeaveIntersectionType o) {
@@ -309,12 +322,12 @@ public class WeaveVisitor extends PsiElementVisitor {
     visitPattern(o);
   }
 
-  public void visitMatchExpression(@NotNull WeaveMatchExpression o) {
-    visitExpression(o);
+  public void visitLiteralType(@NotNull WeaveLiteralType o) {
+    visitType(o);
   }
 
-  public void visitModuleReference(@NotNull WeaveModuleReference o) {
-    visitPsiElement(o);
+  public void visitMatchExpression(@NotNull WeaveMatchExpression o) {
+    visitExpression(o);
   }
 
   public void visitMultiValueSelector(@NotNull WeaveMultiValueSelector o) {
@@ -442,6 +455,10 @@ public class WeaveVisitor extends PsiElementVisitor {
   }
 
   public void visitSchemaElement(@NotNull WeaveSchemaElement o) {
+    visitPsiElement(o);
+  }
+
+  public void visitSchemaKV(@NotNull WeaveSchemaKV o) {
     visitPsiElement(o);
   }
 

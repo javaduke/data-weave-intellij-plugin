@@ -7,6 +7,7 @@ import com.intellij.psi.PsiElement;
 import com.intellij.psi.NavigatablePsiElement;
 import com.intellij.psi.PsiQualifiedNamedElement;
 import com.intellij.navigation.ItemPresentation;
+import javax.swing.Icon;
 
 public interface WeaveDocument extends NavigatablePsiElement, PsiQualifiedNamedElement {
 
@@ -18,16 +19,16 @@ public interface WeaveDocument extends NavigatablePsiElement, PsiQualifiedNamedE
 
   ItemPresentation getPresentation();
 
-  @NotNull
-  String getQualifiedName();
+  @NotNull String getQualifiedName();
 
-  @NotNull
-  String getName();
+  @NotNull String getName();
 
   WeaveDocument setName(String name);
 
   boolean isMappingDocument();
 
   boolean isModuleDocument();
+
+  Icon getElementIcon(int flags);
 
 }

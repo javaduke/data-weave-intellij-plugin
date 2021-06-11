@@ -11,6 +11,7 @@ import static org.mule.tooling.lang.dw.parser.psi.WeaveTypes.*;
 import com.intellij.extapi.psi.ASTWrapperPsiElement;
 import org.mule.tooling.lang.dw.parser.psi.*;
 import com.intellij.navigation.ItemPresentation;
+import javax.swing.Icon;
 
 public class WeaveDocumentImpl extends ASTWrapperPsiElement implements WeaveDocument {
 
@@ -22,6 +23,7 @@ public class WeaveDocumentImpl extends ASTWrapperPsiElement implements WeaveDocu
     visitor.visitDocument(this);
   }
 
+  @Override
   public void accept(@NotNull PsiElementVisitor visitor) {
     if (visitor instanceof WeaveVisitor) accept((WeaveVisitor)visitor);
     else super.accept(visitor);
@@ -45,14 +47,12 @@ public class WeaveDocumentImpl extends ASTWrapperPsiElement implements WeaveDocu
   }
 
   @Override
-  @NotNull
-  public String getQualifiedName() {
+  public @NotNull String getQualifiedName() {
     return WeavePsiImplUtils.getQualifiedName(this);
   }
 
   @Override
-  @NotNull
-  public String getName() {
+  public @NotNull String getName() {
     return WeavePsiImplUtils.getName(this);
   }
 
@@ -69,6 +69,11 @@ public class WeaveDocumentImpl extends ASTWrapperPsiElement implements WeaveDocu
   @Override
   public boolean isModuleDocument() {
     return WeavePsiImplUtils.isModuleDocument(this);
+  }
+
+  @Override
+  public Icon getElementIcon(int flags) {
+    return WeavePsiImplUtils.getElementIcon(this, flags);
   }
 
 }

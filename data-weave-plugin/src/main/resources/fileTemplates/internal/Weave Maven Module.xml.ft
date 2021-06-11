@@ -4,16 +4,21 @@
          xsi:schemaLocation="http://maven.apache.org/POM/4.0.0 http://maven.apache.org/maven-v4_0_0.xsd">
 
     <modelVersion>4.0.0</modelVersion>
-
-    <groupId>${GROUP_ID}</groupId>
+#if (${ORG_ID} != "")
+<groupId>${ORG_ID}</groupId>
+#else
+<groupId>${GROUP_ID}</groupId>
+#end
     <artifactId>${ARTIFACT_ID}</artifactId>
     <version>${VERSION}</version>
+    <packaging>dw-library</packaging>
 
     <name>DataWeave ${ARTIFACT_ID} Module</name>
 
-        <properties>
-            <weave.version>${WEAVE_VERSION}</weave.version>
-        </properties>
+    <properties>
+        <weave.version>${WEAVE_VERSION}</weave.version>
+        <wtf.version>${WTF_VERSION}</wtf.version>
+    </properties>
 
     <dependencies>
 
@@ -41,42 +46,37 @@
         <dependency>
             <groupId>org.mule.weave</groupId>
             <artifactId>wtf</artifactId>
-            <version>${WTF_VERSION}</version>
+            <version>${wtf.version}</version>
             <scope>test</scope>
         </dependency>
     </dependencies>
 
-    <build>
-        <testResources>
-            <testResource>
-                <directory>src/test/dwit</directory>
-            </testResource>
-            <testResource>
-                <directory>src/test/resources</directory>
-            </testResource>
-            <testResource>
-                <directory>src/test/dwtest</directory>
-            </testResource>
-        </testResources>
-        <plugins>
-            <plugin>
-                <groupId>org.mule.weave</groupId>
-                <artifactId>weave-maven-plugin</artifactId>
-                <version>2.2.2-rc1</version>
-                <configuration>
-                    <logForkedProcessCommand>true</logForkedProcessCommand>
-                </configuration>
-                <executions>
-                    <execution>
-                        <phase>test</phase>
-                        <goals>
-                            <goal>test</goal>
-                        </goals>
-                    </execution>
-                </executions>
-            </plugin>
-        </plugins>
-    </build>
+     <build>
+         <resources>
+             <resource>
+                 <directory>src/main/dw</directory>
+             </resource>
+         </resources>
+         <testResources>
+             <testResource>
+                 <directory>src/test/dwit</directory>
+             </testResource>
+             <testResource>
+                 <directory>src/test/dwmit</directory>
+             </testResource>
+             <testResource>
+                 <directory>src/test/dwit</directory>
+             </testResource>
+         </testResources>
+         <plugins>
+             <plugin>
+                 <groupId>org.mule.weave</groupId>
+                 <artifactId>weave-maven-plugin</artifactId>
+                 <version>${WEAVE_MAVEN_VERSION}</version>
+                 <extensions>true</extensions>
+             </plugin>
+         </plugins>
+     </build>
 
     <repositories>
         <repository>
@@ -89,7 +89,15 @@
             <url>https://repository-master.mulesoft.org/nexus/content/repositories/snapshots</url>
          </repository>
     </repositories>
-
+    #if (${ORG_ID} != "")
+      <distributionManagement>
+          <repository>
+              <id>exchange</id>
+              <name>Exchange</name>
+              <url>https://maven.anypoint.mulesoft.com/api/v2/organizations/${ORG_ID}/maven</url>
+          </repository>
+      </distributionManagement>
+    #end
     <pluginRepositories>
         <pluginRepository>
             <id>mule-releases</id>

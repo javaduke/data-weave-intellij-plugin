@@ -5,16 +5,9 @@ import com.intellij.execution.ui.layout.PlaceInGrid;
 import com.intellij.execution.ui.layout.actions.RestoreLayoutAction;
 import com.intellij.icons.AllIcons;
 import com.intellij.openapi.Disposable;
-import com.intellij.openapi.actionSystem.ActionManager;
-import com.intellij.openapi.actionSystem.ActionPopupMenu;
-import com.intellij.openapi.actionSystem.AnAction;
-import com.intellij.openapi.actionSystem.AnActionEvent;
-import com.intellij.openapi.actionSystem.DefaultActionGroup;
-import com.intellij.openapi.actionSystem.Presentation;
-import com.intellij.openapi.actionSystem.ToggleAction;
+import com.intellij.openapi.actionSystem.*;
 import com.intellij.openapi.actionSystem.impl.ActionManagerImpl;
 import com.intellij.openapi.actionSystem.impl.MenuItemPresentationFactory;
-import com.intellij.openapi.application.Application;
 import com.intellij.openapi.application.ApplicationManager;
 import com.intellij.openapi.application.ReadAction;
 import com.intellij.openapi.editor.Document;
@@ -24,13 +17,7 @@ import com.intellij.openapi.module.ModuleUtil;
 import com.intellij.openapi.project.Project;
 import com.intellij.openapi.ui.ComponentWithActions;
 import com.intellij.openapi.vfs.VirtualFile;
-import com.intellij.openapi.wm.impl.content.ToolWindowContentUi;
-import com.intellij.psi.PsiDocumentManager;
-import com.intellij.psi.PsiElement;
-import com.intellij.psi.PsiFile;
-import com.intellij.psi.PsiManager;
-import com.intellij.psi.PsiTreeChangeAdapter;
-import com.intellij.psi.PsiTreeChangeEvent;
+import com.intellij.psi.*;
 import com.intellij.ui.content.Content;
 import com.intellij.util.Alarm;
 import org.jetbrains.annotations.NotNull;
@@ -59,14 +46,14 @@ import java.util.Objects;
 
 public class WeavePreviewComponent implements Disposable {
 
-    private Project myProject;
+    private final Project myProject;
     private PsiFile currentFile;
     private boolean runOnChange = true;
 
-    private Alarm myDocumentAlarm = new Alarm(Alarm.ThreadToUse.POOLED_THREAD, this);
+    private final Alarm myDocumentAlarm = new Alarm(Alarm.ThreadToUse.POOLED_THREAD, this);
     private PreviewToolWindowFactory.NameChanger nameChanger;
 
-    private InputsComponent inputsComponent;
+    private final InputsComponent inputsComponent;
     private final OutputComponent outputComponent;
     private PreviewLogsViewer previewLogsViewer;
     private WeaveTreeChangeListener listener;
@@ -91,7 +78,7 @@ public class WeavePreviewComponent implements Disposable {
 
 
     private JComponent createPreviewPanel() {
-        RunnerLayoutUi layoutUi = RunnerLayoutUi.Factory.getInstance(myProject).create("DW-Preview", "DW Preview", myProject.getName(), myProject);
+        RunnerLayoutUi layoutUi = RunnerLayoutUi.Factory.getInstance(myProject).create("DW-Preview", "DW Preview", myProject.getName(), this);
         Content inputsContent = layoutUi.createContent("inputs", createInputComponent(), "Inputs", null, null);
         inputsContent.setCloseable(false);
         inputsContent.setShouldDisposeContent(true);
@@ -104,7 +91,7 @@ public class WeavePreviewComponent implements Disposable {
         this.outputComponent.setEditorContainer(outputContent);
 
         previewLogsViewer = new PreviewLogsViewer(myProject);
-        Content logsContent = layoutUi.createContent("logs", previewLogsViewer, "Logs/Errors", AllIcons.Debugger.Console_log, null);
+        Content logsContent = layoutUi.createContent("logs", previewLogsViewer, "Logs/Errors", AllIcons.Debugger.Console, null);
         logsContent.setShouldDisposeContent(true);
 
         layoutUi.addContent(logsContent, 0, PlaceInGrid.right, false);
@@ -119,7 +106,7 @@ public class WeavePreviewComponent implements Disposable {
         DefaultActionGroup group = new DefaultActionGroup();
         group.add(new AnAction("Add New Scenario", "Adds a new scenario for the current mapping", AllIcons.General.Add) {
             @Override
-            public void actionPerformed(AnActionEvent e) {
+            public void actionPerformed(@NotNull AnActionEvent e) {
                 WeaveRuntimeContextManager manager = getScenariosManager();
                 AddScenarioDialog dialog = new AddScenarioDialog(myProject, manager, currentFile, (scenario) -> {
                     WeaveDocument currentWeaveDocument = getCurrentWeaveDocument();
@@ -132,42 +119,42 @@ public class WeavePreviewComponent implements Disposable {
             }
 
             @Override
-            public void update(AnActionEvent e) {
+            public void update(@NotNull AnActionEvent e) {
 
             }
         });
-        group.add(new ToggleAction(null, "Pin to this mapping", AllIcons.General.Pin_tab) {
+        group.add(new ToggleAction("Pin to This Mapping", "Pin to this mapping", AllIcons.General.Pin_tab) {
 
             @Override
-            public boolean isSelected(AnActionEvent e) {
+            public boolean isSelected(@NotNull AnActionEvent e) {
                 return pinned;
             }
 
             @Override
-            public void setSelected(AnActionEvent e, boolean state) {
+            public void setSelected(@NotNull AnActionEvent e, boolean state) {
                 pinned = state;
             }
         });
-        group.add(new AnAction("Run", "Execute", AllIcons.General.Run) {
+        group.add(new AnAction("Run", "Execute", AllIcons.RunConfigurations.TestState.Run) {
             @Override
-            public void actionPerformed(AnActionEvent e) {
+            public void actionPerformed(@NotNull AnActionEvent e) {
                 runPreview();
             }
 
             @Override
-            public void update(AnActionEvent e) {
+            public void update(@NotNull AnActionEvent e) {
                 e.getPresentation().setEnabled(runAvailable());
             }
         });
-        group.add(new ToggleAction(null, "Run on editor changes", AllIcons.Ide.IncomingChangesOn) {
+        group.add(new ToggleAction("Run on Editor Changes", "Run on editor changes", AllIcons.Ide.IncomingChangesOn) {
 
             @Override
-            public boolean isSelected(AnActionEvent e) {
+            public boolean isSelected(@NotNull AnActionEvent e) {
                 return runOnChange();
             }
 
             @Override
-            public void setSelected(AnActionEvent e, boolean state) {
+            public void setSelected(@NotNull AnActionEvent e, boolean state) {
                 runOnChange(state);
             }
         });
@@ -193,7 +180,7 @@ public class WeavePreviewComponent implements Disposable {
         DefaultActionGroup group = new DefaultActionGroup();
         group.add(new AnAction("Add New Input", "Adds a new input to the scenario", AllIcons.General.Add) {
             @Override
-            public void actionPerformed(AnActionEvent e) {
+            public void actionPerformed(@NotNull AnActionEvent e) {
                 Scenario currentScenarioMaybe = ReadAction.compute(() -> getCurrentScenario());
                 WeaveRuntimeContextManager manager = getScenariosManager();
                 AddInputDialog dialog = new AddInputDialog(myProject, manager, currentScenarioMaybe, currentFile);
@@ -201,7 +188,7 @@ public class WeavePreviewComponent implements Disposable {
             }
 
             @Override
-            public void update(AnActionEvent e) {
+            public void update(@NotNull AnActionEvent e) {
 
             }
         });
@@ -318,8 +305,10 @@ public class WeavePreviewComponent implements Disposable {
         if (documentQName != null) {
             final String url = ReadAction.compute(() -> currentFile.getVirtualFile().getUrl());
             final Module module = ModuleUtil.findModuleForFile(currentFile.getVirtualFile(), myProject);
-            final WeaveAgentRuntimeManager agentComponent = WeaveAgentRuntimeManager.getInstance(myProject);
-            agentComponent.runPreview(inputsPath, text, documentQName, url, (long) DataWeaveSettingsState.getInstance().getMaxTimePreview(), module, new MyRunPreviewCallback());
+            if(module != null) {
+                final WeaveAgentRuntimeManager agentComponent = WeaveAgentRuntimeManager.getInstance(myProject);
+                agentComponent.runPreview(inputsPath, text, documentQName, url, (long) DataWeaveSettingsState.getInstance().getMaxTimePreview(), module, new MyRunPreviewCallback());
+            }
         }
     }
 
@@ -337,7 +326,7 @@ public class WeavePreviewComponent implements Disposable {
     }
 
     public boolean runAvailable() {
-        return currentFile != null && getCurrentScenario() != null;
+        return currentFile != null;
     }
 
     public boolean runOnChange() {
@@ -363,7 +352,11 @@ public class WeavePreviewComponent implements Disposable {
 //    }
 
     private boolean isOutputFile(PsiFile psiFile) {
-        return psiFile.getVirtualFile().getNameWithoutExtension().equals("out");
+        return "out".equals(psiFile.getVirtualFile().getNameWithoutExtension());
+    }
+
+    public boolean isPinned() {
+        return pinned;
     }
 
     /**
@@ -491,7 +484,7 @@ public class WeavePreviewComponent implements Disposable {
 
     private class SelectScenarioAction extends AnAction {
         public SelectScenarioAction() {
-            super(null, "Select scenario", AllIcons.General.Gear);
+            super("Select Scenario", "Select scenario", AllIcons.General.GearPlain);
         }
 
         @Override
@@ -504,7 +497,7 @@ public class WeavePreviewComponent implements Disposable {
             final InputEvent inputEvent = e.getInputEvent();
             final ActionPopupMenu popupMenu =
                     ((ActionManagerImpl) ActionManager.getInstance())
-                            .createActionPopupMenu(ToolWindowContentUi.POPUP_PLACE, group, new MenuItemPresentationFactory(true));
+                            .createActionPopupMenu(ActionPlaces.TOOLWINDOW_POPUP, group, new MenuItemPresentationFactory(true));
 
             int x = 0;
             int y = 0;

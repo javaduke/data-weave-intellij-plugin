@@ -14,6 +14,7 @@ import com.intellij.openapi.util.Disposer;
 import com.intellij.openapi.vfs.VirtualFile;
 import com.intellij.psi.PsiFile;
 import com.intellij.psi.PsiManager;
+import com.intellij.util.concurrency.AppExecutorUtil;
 import com.intellij.util.messages.MessageBusConnection;
 import org.jetbrains.annotations.NotNull;
 import org.jetbrains.annotations.Nullable;
@@ -25,6 +26,7 @@ import org.mule.tooling.lang.dw.ui.MessagePanel;
 
 import javax.swing.*;
 import java.awt.*;
+import java.util.concurrent.ExecutorService;
 
 public class PreviewToolWindowPanel extends SimpleToolWindowPanel implements Disposable {
     public static final String NOTHING_TO_SHOW = "NOTHING_TO_SHOW";
@@ -32,12 +34,14 @@ public class PreviewToolWindowPanel extends SimpleToolWindowPanel implements Dis
     public static final String NO_RUNTIME_AVAILABLE = "NO_RUNTIME_AVAILABLE";
     //TODO we should put this in a settings file
 
+    private @NotNull ExecutorService dependenciesChanges = AppExecutorUtil.createBoundedApplicationPoolExecutor("RootChanges", 15);
+
     private Project myProject;
     private WeavePreviewComponent weavePreviewComponent;
     private JPanel mainPanel;
     private CardLayout cardLayout;
     private JComponent previewComponent;
-    private boolean pinned = false;
+
     private WeaveAgentRuntimeManager agentRuntimeManager;
 
     public PreviewToolWindowPanel(Project project) {
@@ -69,6 +73,16 @@ public class PreviewToolWindowPanel extends SimpleToolWindowPanel implements Dis
         myProject.getMessageBus().connect(this).subscribe(FileEditorManagerListener.FILE_EDITOR_MANAGER, new FileEditorManagerListener() {
 
             @Override
+            public void fileOpened(@NotNull FileEditorManager source, @NotNull VirtualFile file) {
+                if (!weavePreviewComponent.isPinned()) {
+                    final PsiFile psiFile = file.isValid() ? PsiManager.getInstance(myProject).findFile(file) : null;
+                    // This invokeLater is required. The problem is open does a commit to PSI, but open is
+                    // invoked inside PSI change event. It causes an Exception like "Changes to PSI are not allowed inside event processing"
+                    DumbService.getInstance(myProject).smartInvokeLater(() -> setFile(psiFile));
+                }
+            }
+
+            @Override
             public void selectionChanged(@NotNull FileEditorManagerEvent e) {
 
                 if (agentRuntimeManager.isWeaveRuntimeInstalled()) {
@@ -90,11 +104,14 @@ public class PreviewToolWindowPanel extends SimpleToolWindowPanel implements Dis
                     connection[0].subscribe(ProjectTopics.PROJECT_ROOTS, new ModuleRootListener() {
                         @Override
                         public void rootsChanged(ModuleRootEvent event) {
-                            if (agentRuntimeManager.isWeaveRuntimeInstalled()) {
-                                showFile(e);
-                                connection[0].disconnect();
-                                connection[0] = null;
-                            }
+                            dependenciesChanges.submit(() -> {
+                                if (agentRuntimeManager.isWeaveRuntimeInstalled()) {
+                                    showFile(e);
+                                    connection[0].disconnect();
+                                    connection[0] = null;
+                                }
+                            });
+
                         }
                     });
                 }
@@ -103,7 +120,7 @@ public class PreviewToolWindowPanel extends SimpleToolWindowPanel implements Dis
     }
 
     private void showFile(@NotNull FileEditorManagerEvent e) {
-        if (!pinned) {
+        if (!weavePreviewComponent.isPinned()) {
             VirtualFile file = e.getNewFile();
             final PsiFile psiFile = file != null && file.isValid() ? PsiManager.getInstance(myProject).findFile(file) : null;
             // This invokeLater is required. The problem is open does a commit to PSI, but open is

@@ -16,13 +16,27 @@ public class WeaveImportDirectiveImpl extends WeaveDirectiveImpl implements Weav
     super(node);
   }
 
+  @Override
   public void accept(@NotNull WeaveVisitor visitor) {
     visitor.visitImportDirective(this);
   }
 
+  @Override
   public void accept(@NotNull PsiElementVisitor visitor) {
     if (visitor instanceof WeaveVisitor) accept((WeaveVisitor)visitor);
     else super.accept(visitor);
+  }
+
+  @Override
+  @NotNull
+  public List<WeaveAnnotation> getAnnotationList() {
+    return PsiTreeUtil.getChildrenOfTypeAsList(this, WeaveAnnotation.class);
+  }
+
+  @Override
+  @Nullable
+  public WeaveFqnIdentifier getFqnIdentifier() {
+    return findChildByClass(WeaveFqnIdentifier.class);
   }
 
   @Override
@@ -35,12 +49,6 @@ public class WeaveImportDirectiveImpl extends WeaveDirectiveImpl implements Weav
   @NotNull
   public List<WeaveImportedElement> getImportedElementList() {
     return PsiTreeUtil.getChildrenOfTypeAsList(this, WeaveImportedElement.class);
-  }
-
-  @Override
-  @Nullable
-  public WeaveModuleReference getModuleReference() {
-    return findChildByClass(WeaveModuleReference.class);
   }
 
 }

@@ -1,23 +1,31 @@
 // This is a generated file. Not intended for manual editing.
 package org.mule.tooling.lang.dw.parser.psi;
 
-import org.jetbrains.annotations.NotNull;
-import org.jetbrains.annotations.Nullable;
-
 import java.util.List;
+import org.jetbrains.annotations.*;
+import com.intellij.psi.PsiElement;
 
-public interface WeaveInputDirective extends WeaveDirective {
-
-  @Nullable
-  WeaveDataFormat getDataFormat();
+public interface WeaveInputDirective extends WeaveDirective, WeaveNamedElement {
 
   @NotNull
-  List<WeaveIdentifier> getIdentifierList();
+  List<WeaveAnnotation> getAnnotationList();
+
+  @Nullable
+  WeaveIdentifier getIdentifier();
+
+  @Nullable
+  WeaveInputDataFormat getInputDataFormat();
 
   @Nullable
   WeaveOptions getOptions();
 
   @Nullable
   WeaveType getType();
+
+  String getName();
+
+  PsiElement setName(@NotNull String newName);
+
+  PsiElement getNameIdentifier();
 
 }

@@ -17,17 +17,23 @@ import com.intellij.execution.testframework.sm.runner.SMTRunnerConsoleProperties
 import com.intellij.execution.ui.ConsoleView;
 import com.intellij.openapi.module.Module;
 import com.intellij.openapi.roots.ProjectRootManager;
+import org.apache.commons.lang.StringUtils;
 import org.jetbrains.annotations.NotNull;
-import org.mule.tooling.lang.dw.launcher.configuration.WeaveTestConfiguration;
+import org.mule.tooling.lang.dw.launcher.configuration.ui.test.WeaveTestBaseRunnerConfig;
+
+import java.util.List;
+import java.util.Objects;
+
+import static java.util.Objects.requireNonNull;
 
 public class WeaveTestRunnerCommandLine extends WeaveCommandLineState {
 
     //Mule Main Class
 
     private final boolean isDebug;
-    private WeaveTestConfiguration configuration;
+    private WeaveTestBaseRunnerConfig configuration;
 
-    public WeaveTestRunnerCommandLine(@NotNull ExecutionEnvironment environment, WeaveTestConfiguration configuration) {
+    public WeaveTestRunnerCommandLine(@NotNull ExecutionEnvironment environment, WeaveTestBaseRunnerConfig configuration) {
         super(environment);
         this.isDebug = DefaultDebugExecutor.EXECUTOR_ID.equals(environment.getExecutor().getId());
         this.configuration = configuration;
@@ -46,6 +52,22 @@ public class WeaveTestRunnerCommandLine extends WeaveCommandLineState {
 
         //Add default vm parameters
         WeaveRunnerHelper.setupDefaultVMParams(javaParams);
+        if (configuration.isUpdateResult()) {
+            javaParams.getVMParametersList().addProperty("updateResult", "true");
+        }
+
+        if (StringUtils.isNotBlank(configuration.getTestToRun())) {
+            javaParams.getVMParametersList().addProperty("testToRun", configuration.getTestToRun());
+        }
+
+
+        configuration.addAdditionalVMParameters(javaParams);
+        //Set user.dir to module home
+
+        final String workingDirectory = configuration.getWorkingDirectory();
+        if (StringUtils.isNotBlank(workingDirectory)) {
+            javaParams.getVMParametersList().addProperty("user.dir", workingDirectory);
+        }
 
         ParametersList params = javaParams.getProgramParametersList();
         params.add("--wtest");
@@ -56,8 +78,12 @@ public class WeaveTestRunnerCommandLine extends WeaveCommandLineState {
             params.add("-debug");
         }
 
-        params.add("-test");
-        params.add(configuration.getWeaveFile());
+        final List<String> tests = configuration.getTests();
+        for (String test : tests) {
+            params.add("-test");
+            params.add(test);
+        }
+
 
         // All done, run it
         return javaParams;
@@ -73,7 +99,7 @@ public class WeaveTestRunnerCommandLine extends WeaveCommandLineState {
         return new DefaultExecutionResult(console, processHandler, createActions(console, processHandler));
     }
 
-    public WeaveTestConfiguration getConfiguration() {
+    public WeaveTestBaseRunnerConfig getConfiguration() {
         return configuration;
     }
 

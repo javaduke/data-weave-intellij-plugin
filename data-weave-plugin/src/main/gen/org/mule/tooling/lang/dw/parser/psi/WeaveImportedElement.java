@@ -5,9 +5,18 @@ import java.util.List;
 import org.jetbrains.annotations.*;
 import com.intellij.psi.PsiElement;
 
-public interface WeaveImportedElement extends PsiElement {
+public interface WeaveImportedElement extends WeaveNamedElement {
 
   @NotNull
-  List<WeaveIdentifier> getIdentifierList();
+  WeaveIdentifier getIdentifier();
+
+  @Nullable
+  WeaveImportedElementAlias getImportedElementAlias();
+
+  String getName();
+
+  PsiElement setName(@NotNull String newName);
+
+  PsiElement getNameIdentifier();
 
 }

@@ -30,6 +30,7 @@ import org.mule.tooling.lang.dw.WeaveConstants;
 import org.mule.tooling.lang.dw.parser.psi.WeaveDocument;
 import org.mule.tooling.lang.dw.parser.psi.WeavePsiUtils;
 import org.mule.tooling.lang.dw.service.agent.WeaveAgentRuntimeManager;
+import org.mule.tooling.lang.dw.util.WeaveUtils;
 import org.mule.weave.v2.debugger.event.WeaveDataFormatDescriptor;
 import org.mule.weave.v2.debugger.event.WeaveTypeEntry;
 import org.mule.weave.v2.editor.ImplicitInput;
@@ -37,13 +38,13 @@ import org.mule.weave.v2.ts.AnyType;
 import org.mule.weave.v2.ts.WeaveType;
 import scala.Tuple2;
 
-import java.io.File;
 import java.io.IOException;
 import java.util.*;
 import java.util.concurrent.ConcurrentHashMap;
 import java.util.concurrent.ExecutionException;
 import java.util.concurrent.TimeUnit;
 import java.util.concurrent.TimeoutException;
+import java.util.function.Consumer;
 import java.util.stream.Collectors;
 
 import static org.mule.tooling.lang.dw.parser.psi.WeavePsiUtils.getWeaveDocument;
@@ -56,11 +57,12 @@ public class WeaveRuntimeContextManager implements ProjectComponent, Disposable 
     private Map<Scenario, ImplicitInput> implicitInputTypes = new ConcurrentHashMap<>();
     private Map<Scenario, WeaveType> expectedOutputType = new HashMap<>();
     private Map<String, VirtualFile> dwitFolders = new HashMap<>();
-    private WeaveDataFormatDescriptor[] dataFormat = new WeaveDataFormatDescriptor[0];
-    private String[] modules = new String[0];
 
-    private List<StatusChangeListener> listeners = new ArrayList<>();
+    private String[] modules = new String[0];
     private Project myProject;
+    private volatile boolean started;
+
+    private List<Runnable> onComponentStarted = new ArrayList<>();
 
 
     protected WeaveRuntimeContextManager(Project project) {
@@ -71,34 +73,18 @@ public class WeaveRuntimeContextManager implements ProjectComponent, Disposable 
         return myProject.getComponent(WeaveRuntimeContextManager.class);
     }
 
-    public void addListener(StatusChangeListener listener) {
-        if (modules.length > 0) {
-            listener.onModulesLoaded(modules);
-        }
-        if (dataFormat.length > 0) {
-            listener.onDataFormatLoaded(dataFormat);
-        }
-
-        this.listeners.add(listener);
+    @Override
+    public void projectOpened() {
+        started = true;
+        ApplicationManager.getApplication().executeOnPooledThread(() -> {
+            for (Runnable runnable : onComponentStarted) {
+                runnable.run();
+            }
+        });
     }
 
     @Override
     public void initComponent() {
-        WeaveAgentRuntimeManager.getInstance(myProject).addStatusListener(() -> {
-            WeaveAgentRuntimeManager.getInstance(myProject).dataFormats((dataFormatEvent) -> {
-                dataFormat = dataFormatEvent.formats();
-                for (StatusChangeListener listener : listeners) {
-                    listener.onDataFormatLoaded(dataFormat);
-                }
-            });
-            WeaveAgentRuntimeManager.getInstance(myProject).availableModules((modulesEvent) -> {
-                modules = modulesEvent.modules();
-                for (StatusChangeListener listener : listeners) {
-                    listener.onModulesLoaded(modules);
-                }
-            });
-        });
-
         PsiManager.getInstance(myProject).addPsiTreeChangeListener(new PsiTreeChangeAdapter() {
             @Override
             public void childReplaced(@NotNull PsiTreeChangeEvent event) {
@@ -116,7 +102,6 @@ public class WeaveRuntimeContextManager implements ProjectComponent, Disposable 
 
             }
         }, this);
-
 
         VirtualFileManager.getInstance().addVirtualFileListener(new VirtualFileListener() {
             @Override
@@ -154,8 +139,10 @@ public class WeaveRuntimeContextManager implements ProjectComponent, Disposable 
         }
         final Application app = ApplicationManager.getApplication();
         Runnable r = () -> {
+            if(myProject.isDisposed()){
+                return; //sometime
+            }
             final Module moduleForFile = ModuleUtil.findModuleForFile(modifiedFile, myProject);
-
             app.runWriteAction(() -> {
                 final VirtualFile dwitFolder = getScenariosRootFolder(moduleForFile);
                 if (dwitFolder != null && VfsUtil.isAncestor(dwitFolder, modifiedFile, true)) {
@@ -171,24 +158,26 @@ public class WeaveRuntimeContextManager implements ProjectComponent, Disposable 
         }
     }
 
-    @NotNull
-    public WeaveDataFormatDescriptor[] getAvailableDataFormat() {
-        if (dataFormat.length > 0) {
-            return dataFormat;
-        } else {
+    public void availableDataFormat(Consumer<WeaveDataFormatDescriptor[]> callback) {
+        runWhenStarted(() -> {
             FutureResult<WeaveDataFormatDescriptor[]> futureResult = new FutureResult<>();
             WeaveAgentRuntimeManager.getInstance(myProject).dataFormats((dataFormatEvent) -> {
                 WeaveDataFormatDescriptor[] formats = dataFormatEvent.formats();
-                this.dataFormat = formats;
-                futureResult.set(formats);
+                callback.accept(formats);
             });
-            try {
-                return futureResult.get(WeaveConstants.SERVER_TIMEOUT, TimeUnit.MILLISECONDS);
-            } catch (InterruptedException | ExecutionException | TimeoutException e) {
-                return dataFormat;
-            }
+        });
+
+
+    }
+
+    private void runWhenStarted(Runnable runnable) {
+        if (started) {
+            runnable.run();
+        } else {
+            onComponentStarted.add(runnable);
         }
     }
+
 
     @NotNull
     public String[] getAvailableModule() {
@@ -227,7 +216,12 @@ public class WeaveRuntimeContextManager implements ProjectComponent, Disposable 
     }
 
     public void setCurrentScenario(WeaveDocument weaveDocument, Scenario scenario) {
-        this.selectedScenariosByMapping.put(weaveDocument.getQualifiedName(), scenario);
+        this.selectedScenariosByMapping.put(getTestFolderName(weaveDocument), scenario);
+    }
+
+    @NotNull
+    private String getTestFolderName(WeaveDocument weaveDocument) {
+        return weaveDocument.getQualifiedName().replaceAll("::", "-");
     }
 
     @Nullable
@@ -333,7 +327,7 @@ public class WeaveRuntimeContextManager implements ProjectComponent, Disposable 
         if (weaveDocument == null) {
             return null;
         }
-        String qName = ReadAction.compute(() -> weaveDocument.getQualifiedName());
+        String qName = ReadAction.compute(() -> getTestFolderName(weaveDocument));
         Scenario scenario = selectedScenariosByMapping.get(qName);
         if (scenario == null || !scenario.isValid()) {
             selectedScenariosByMapping.remove(qName);
@@ -375,6 +369,9 @@ public class WeaveRuntimeContextManager implements ProjectComponent, Disposable 
 
     @NotNull
     public List<Scenario> getScenariosFor(WeaveDocument weaveDocument) {
+        if(weaveDocument == null){
+            return Collections.emptyList();
+        }
         final List<Scenario> result = new ArrayList<>();
         final PsiFile weaveFile = weaveDocument.getContainingFile();
         final Module moduleForFile = ModuleUtil.findModuleForFile(weaveFile.getVirtualFile(), weaveFile.getProject());
@@ -397,7 +394,7 @@ public class WeaveRuntimeContextManager implements ProjectComponent, Disposable 
     public VirtualFile findMappingTestFolder(PsiFile psiFile) {
         WeaveDocument document = getWeaveDocument(psiFile);
         if (document != null) {
-            String qualifiedName = ReadAction.compute(() -> document.getQualifiedName());
+            String qualifiedName = ReadAction.compute(() -> getTestFolderName(document));
             VirtualFile scenariosRootFolder = getScenariosRootFolder(psiFile);
             if (scenariosRootFolder != null && scenariosRootFolder.isValid()) {
                 return scenariosRootFolder.findChild(qualifiedName);
@@ -472,7 +469,7 @@ public class WeaveRuntimeContextManager implements ProjectComponent, Disposable 
                 }
                 final WeaveDocument document = WeavePsiUtils.getWeaveDocument(weaveFile);
                 if (document != null) {
-                    String qName = document.getQualifiedName();
+                    String qName = getTestFolderName(document);
                     return dwitFolder.createChildDirectory(this, qName);
                 } else {
                     return null;
@@ -495,23 +492,7 @@ public class WeaveRuntimeContextManager implements ProjectComponent, Disposable 
 
     @Nullable
     private VirtualFile getScenariosRootFolder(@Nullable Module module) {
-        if (module == null) {
-            return null;
-        }
-        String moduleName = module.getName();
-        VirtualFile maybeFolder = dwitFolders.get(moduleName);
-        if (maybeFolder != null) {
-            return maybeFolder;
-        }
-        final ModuleRootManager rootManager = ModuleRootManager.getInstance(module);
-        final VirtualFile[] sourceRoots = rootManager.getSourceRoots(true);
-        for (VirtualFile sourceRoot : sourceRoots) {
-            if (sourceRoot.isDirectory() && sourceRoot.getName().endsWith(WeaveConstants.INTEGRATION_TEST_FOLDER_NAME)) {
-                dwitFolders.put(moduleName, sourceRoot);
-                return sourceRoot;
-            }
-        }
-        return null;
+        return WeaveUtils.getDWITFolder(module);
     }
 
 
@@ -520,11 +501,4 @@ public class WeaveRuntimeContextManager implements ProjectComponent, Disposable 
 
     }
 
-    public interface StatusChangeListener {
-        default void onDataFormatLoaded(WeaveDataFormatDescriptor[] dataFormatDescriptor) {
-        }
-
-        default void onModulesLoaded(String[] modules) {
-        }
-    }
 }

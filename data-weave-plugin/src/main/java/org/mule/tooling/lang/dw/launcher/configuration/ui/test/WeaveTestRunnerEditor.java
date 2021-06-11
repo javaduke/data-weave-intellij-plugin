@@ -1,9 +1,10 @@
-package org.mule.tooling.lang.dw.launcher.configuration;
+package org.mule.tooling.lang.dw.launcher.configuration.ui.test;
 
 import com.intellij.openapi.module.Module;
 import com.intellij.openapi.options.SettingsEditor;
 import org.jetbrains.annotations.NotNull;
-import org.mule.tooling.lang.dw.launcher.configuration.ui.WeaveTestRunnerConfPanel;
+import org.mule.tooling.lang.dw.launcher.configuration.ui.test.ui.WeaveTestRunnerConfPanel;
+
 
 import javax.swing.*;
 import java.util.Collection;
@@ -14,7 +15,7 @@ public class WeaveTestRunnerEditor extends SettingsEditor<WeaveTestConfiguration
   private WeaveTestRunnerConfPanel configurationPanel;
 
   public WeaveTestRunnerEditor(WeaveTestConfiguration runnerConfiguration) {
-    this.configurationPanel = new WeaveTestRunnerConfPanel();
+    this.configurationPanel = new WeaveTestRunnerConfPanel(runnerConfiguration.getProject());
     super.resetFrom(runnerConfiguration);
   }
 
@@ -35,7 +36,10 @@ public class WeaveTestRunnerEditor extends SettingsEditor<WeaveTestConfiguration
     }
     this.configurationPanel.getModuleCombo().setSelectedModule(selectedModule);
     this.configurationPanel.getTestField().setModule(selectedModule);
-    this.configurationPanel.getTestField().setNameIdentifier(runnerConfiguration.getWeaveFile());
+    this.configurationPanel.getTestField().setNameIdentifier(runnerConfiguration.getTests().get(0));
+    this.configurationPanel.getVmOptions().setText(runnerConfiguration.getVmOptions());
+    this.configurationPanel.getVmOptions().setText(runnerConfiguration.getVmOptions());
+    this.configurationPanel.getWorkingDirectory().setText(runnerConfiguration.getWorkingDirectory());
   }
 
   /**
@@ -50,6 +54,8 @@ public class WeaveTestRunnerEditor extends SettingsEditor<WeaveTestConfiguration
     if (selectedModule != null) {
       runnerConfiguration.setModule(selectedModule);
     }
+    runnerConfiguration.setVmOptions(this.configurationPanel.getVmOptions().getText());
+    runnerConfiguration.setWorkingDirectory(this.configurationPanel.getWorkingDirectory().getText());
   }
 
   @NotNull

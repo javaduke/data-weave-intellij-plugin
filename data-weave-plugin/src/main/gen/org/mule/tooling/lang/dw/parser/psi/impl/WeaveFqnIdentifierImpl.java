@@ -22,6 +22,7 @@ public class WeaveFqnIdentifierImpl extends WeaveNamedElementImpl implements Wea
     visitor.visitFqnIdentifier(this);
   }
 
+  @Override
   public void accept(@NotNull PsiElementVisitor visitor) {
     if (visitor instanceof WeaveVisitor) accept((WeaveVisitor)visitor);
     else super.accept(visitor);
@@ -48,6 +49,16 @@ public class WeaveFqnIdentifierImpl extends WeaveNamedElementImpl implements Wea
   @Override
   public PsiReference[] getReferences() {
     return WeavePsiImplUtils.getReferences(this);
+  }
+
+  @Override
+  public String getModuleFQN() {
+    return WeavePsiImplUtils.getModuleFQN(this);
+  }
+
+  @Override
+  public String getPath() {
+    return WeavePsiImplUtils.getPath(this);
   }
 
 }

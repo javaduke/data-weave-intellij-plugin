@@ -16,13 +16,21 @@ public class WeaveOutputDirectiveImpl extends WeaveDirectiveImpl implements Weav
     super(node);
   }
 
+  @Override
   public void accept(@NotNull WeaveVisitor visitor) {
     visitor.visitOutputDirective(this);
   }
 
+  @Override
   public void accept(@NotNull PsiElementVisitor visitor) {
     if (visitor instanceof WeaveVisitor) accept((WeaveVisitor)visitor);
     else super.accept(visitor);
+  }
+
+  @Override
+  @NotNull
+  public List<WeaveAnnotation> getAnnotationList() {
+    return PsiTreeUtil.getChildrenOfTypeAsList(this, WeaveAnnotation.class);
   }
 
   @Override

@@ -1,5 +1,5 @@
 <idea-plugin>
-    <idea-version since-build="182"/>
+    <idea-version since-build="193.7288.26"/>
     <id>org.mule.tooling.intellij.dataweave.v2</id>
     <name>DataWeave 2.0.</name>
     <version>2.0.6</version>
@@ -181,6 +181,64 @@
           </ul>
         </li>
       </ul>
+         <h1>v2.0.38</h1>
+      <ul>
+       <li>
+          <p>DataWeave 2.0 Support</p>
+          <ul>
+            <li>Some autocompletion fixes.</li>
+            <li>Small UI teaks.</li>
+            <li>Support for 2.3.0 syntax.</li>
+            <li>Use latest wtf testing.</li>
+          </ul>
+        </li>
+      </ul>
+         <h1>v2.0.40</h1>
+      <ul>
+       <li>
+          <p>DataWeave 2.0 Support</p>
+          <ul>
+            <li>Add support for optional field on function types.</li>
+          </ul>
+        </li>
+      </ul>
+          <h1>v2.0.42</h1>
+      <ul>
+       <li>
+          <p>DataWeave 2.0 Support</p>
+          <ul>
+            <li>Fix build for latest IJ.</li>
+            <li>Fix autocompletion of namespace elements.</li>
+          </ul>
+        </li>
+      </ul>
+          <h1>v2.0.44</h1>
+      <ul>
+       <li>
+          <p>DataWeave 2.0 Support</p>
+          <ul>
+            <li>Update to latest Weave Tooling.</li>
+            <li>Improve support for RAML modules.</li>
+            <li>Add dependency graph view.</li>
+            <li>Fix show parameters info.</li>
+            <li>Add new icons.</li>
+            <li>Add support for latest WaveTestingFramework.</li>
+            <li>Use latest tooling api for better go to declaration.</li>
+          </ul>
+        </li>
+      </ul>
+      <h1>v2.0.48</h1>
+      <ul>
+       <li>
+          <p>DataWeave 2.0 Support</p>
+          <ul>
+            <li>Add support for multilinestring.</li>
+            <li>Improve support for Weave Testing Framework.</li>
+            <li>Add support for Weave Integration Test.</li>
+            <li>Fix classcast.</li>
+          </ul>
+        </li>
+      </ul>
     ]]>
     </change-notes>
 
@@ -202,11 +260,12 @@
         <runConfigurationProducer
                 implementation="org.mule.tooling.lang.dw.launcher.configuration.WeaveConfigurationProducer"/>
 
-        <configurationType implementation="org.mule.tooling.lang.dw.launcher.configuration.WeaveTestConfigurationType"/>
+        <configurationType implementation="org.mule.tooling.lang.dw.launcher.configuration.ui.test.WeaveTestConfigurationType"/>
+        <configurationType implementation="org.mule.tooling.lang.dw.launcher.configuration.ui.test.WeaveIntegrationTestConfigurationType"/>
         <runConfigurationProducer
-                implementation="org.mule.tooling.lang.dw.launcher.configuration.WeaveTestConfigurationProducer"/>
+                implementation="org.mule.tooling.lang.dw.launcher.configuration.ui.test.WeaveTestConfigurationProducer"/>
 
-        <fileTypeFactory implementation="org.mule.tooling.lang.dw.WeaveFileTypeFactory"/>
+        <fileType name="Weave" language="Weave" implementationClass="org.mule.tooling.lang.dw.WeaveFileType" fieldName="instance" extensions="dwl"/>
         <lang.parserDefinition language="Weave"
                                implementationClass="org.mule.tooling.lang.dw.parser.WeaveParserDefinition"/>
         <lang.syntaxHighlighterFactory language="Weave"
@@ -289,6 +348,8 @@
                                     implementationClass="org.mule.tooling.lang.dw.documentation.WeaveCodeDocumentationProvider"/>
         <externalAnnotator language="Weave"
                            implementationClass="org.mule.tooling.lang.dw.annotator.WeaveDocsAnnotator"/>
+
+        <highlightingPassFactory implementation="org.mule.tooling.lang.dw.hints.WeaveTypeHintPassFactory"/>
     </extensions>
 
     <project-components>
@@ -301,9 +362,7 @@
         <component>
             <implementation-class>org.mule.tooling.lang.dw.service.WeaveRuntimeContextManager</implementation-class>
         </component>
-        <component>
-            <implementation-class>org.mule.tooling.lang.dw.hints.WeaveTypeHintPassFactory</implementation-class>
-        </component>
+
     </project-components>
     <application-components>
         <!-- Add your application components here -->

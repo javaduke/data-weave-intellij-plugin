@@ -21,21 +21,22 @@ public class WeaveSchemaElementImpl extends ASTWrapperPsiElement implements Weav
     visitor.visitSchemaElement(this);
   }
 
+  @Override
   public void accept(@NotNull PsiElementVisitor visitor) {
     if (visitor instanceof WeaveVisitor) accept((WeaveVisitor)visitor);
     else super.accept(visitor);
   }
 
   @Override
-  @NotNull
-  public List<WeaveExpression> getExpressionList() {
-    return PsiTreeUtil.getChildrenOfTypeAsList(this, WeaveExpression.class);
+  @Nullable
+  public WeaveConditionalSchemaKV getConditionalSchemaKV() {
+    return findChildByClass(WeaveConditionalSchemaKV.class);
   }
 
   @Override
   @Nullable
-  public WeaveIdentifier getIdentifier() {
-    return findChildByClass(WeaveIdentifier.class);
+  public WeaveSchemaKV getSchemaKV() {
+    return findChildByClass(WeaveSchemaKV.class);
   }
 
 }

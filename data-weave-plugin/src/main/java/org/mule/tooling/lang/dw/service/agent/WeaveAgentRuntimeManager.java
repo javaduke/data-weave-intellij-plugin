@@ -1,6 +1,7 @@
 package org.mule.tooling.lang.dw.service.agent;
 
 import com.intellij.ProjectTopics;
+import com.intellij.compiler.server.BuildManagerListener;
 import com.intellij.execution.DefaultExecutionResult;
 import com.intellij.execution.ExecutionException;
 import com.intellij.execution.ExecutionResult;
@@ -19,6 +20,10 @@ import com.intellij.notification.Notifications;
 import com.intellij.openapi.Disposable;
 import com.intellij.openapi.application.ApplicationManager;
 import com.intellij.openapi.application.ReadAction;
+import com.intellij.openapi.compiler.CompilationStatusListener;
+import com.intellij.openapi.compiler.CompileContext;
+import com.intellij.openapi.compiler.CompilerTopics;
+import com.intellij.openapi.compiler.DummyCompileContext;
 import com.intellij.openapi.components.ProjectComponent;
 import com.intellij.openapi.diagnostic.Logger;
 import com.intellij.openapi.fileEditor.FileDocumentManager;
@@ -37,6 +42,8 @@ import com.intellij.psi.PsiClass;
 import com.intellij.psi.search.GlobalSearchScope;
 import com.intellij.util.Alarm;
 import com.intellij.util.PathsList;
+import com.intellij.util.messages.MessageBus;
+import com.intellij.util.messages.MessageBusConnection;
 import com.intellij.util.net.NetUtils;
 import org.jetbrains.annotations.NotNull;
 import org.jetbrains.annotations.Nullable;
@@ -51,8 +58,9 @@ import org.mule.weave.v2.debugger.event.*;
 import java.io.IOException;
 import java.util.ArrayList;
 import java.util.List;
+import java.util.UUID;
 
-public class WeaveAgentRuntimeManager  implements Disposable,ProjectComponent {
+public class WeaveAgentRuntimeManager implements Disposable, ProjectComponent {
 
     public static final int MAX_RETRIES = 10;
     public static final long ONE_SECOND_DELAY = 1000L;
@@ -83,14 +91,55 @@ public class WeaveAgentRuntimeManager  implements Disposable,ProjectComponent {
     @Override
     public void projectOpened() {
 
-        myProject.getMessageBus().connect(myProject).subscribe(ProjectTopics.PROJECT_ROOTS, new ModuleRootListener() {
+        myProject.getMessageBus()
+                .connect(myProject)
+                .subscribe(ProjectTopics.PROJECT_ROOTS, new ModuleRootListener() {
+                    @Override
+                    public void rootsChanged(@NotNull ModuleRootEvent event) {
+                        //We stop the server as classpath has changed
+                        restart();
+                    }
+                });
+
+        final MessageBus messageBus = ApplicationManager.getApplication().getMessageBus();
+        final MessageBusConnection connection = messageBus.connect(this);
+
+        connection.subscribe(BuildManagerListener.TOPIC, new BuildManagerListener() {
             @Override
-            public void rootsChanged(@NotNull ModuleRootEvent event) {
-                //We stop the server as classpath has changed
-                tearDown();
+            public void buildFinished(@NotNull Project project, @NotNull UUID sessionId, boolean isAutomake) {
+                if (project == myProject) {
+                    restart();
+                }
             }
         });
+
+        connection.subscribe(CompilerTopics.COMPILATION_STATUS, new CompilationStatusListener() {
+            @Override
+            public void compilationFinished(boolean aborted, int errors, int warnings, @NotNull CompileContext compileContext) {
+                compilationFinished(compileContext);
+            }
+
+            @Override
+            public void automakeCompilationFinished(int errors, int warnings, @NotNull CompileContext compileContext) {
+                compilationFinished(compileContext);
+            }
+
+            private void compilationFinished(@NotNull CompileContext context) {
+                if (!(context instanceof DummyCompileContext) && context.getProject() == myProject) {
+                    restart();
+                }
+            }
+        });
+
         Runtime.getRuntime().addShutdownHook(new Thread(this::tearDown));
+    }
+
+    private void restart() {
+        if (client != null) {
+            //We only restart if there is an active connection
+            tearDown();
+            init(new EmptyProgressIndicator());
+        }
     }
 
 
@@ -127,7 +176,7 @@ public class WeaveAgentRuntimeManager  implements Disposable,ProjectComponent {
 
             LOG.info("DataWeave agent is starting on port " + freePort);
 
-            final ProgramRunner runner = new DefaultProgramRunner() {
+            final ProgramRunner<RunnerSettings> runner = new DefaultProgramRunner() {
                 @Override
                 @NotNull
                 public String getRunnerId() {
@@ -157,7 +206,7 @@ public class WeaveAgentRuntimeManager  implements Disposable,ProjectComponent {
                 //Wait for it to init
                 processHandler.waitFor(ONE_SECOND_DELAY);
             } catch (Throwable e) {
-                Notifications.Bus.notify(new Notification("Data Weave", "Unable to start agent", "Unable to start agent. Reason: \n" + e.getMessage(), NotificationType.ERROR));
+                Notifications.Bus.notify(new Notification(Notifications.SYSTEM_MESSAGES_GROUP_ID, "Unable to start agent", "Unable to start agent. Reason: \n" + e.getMessage(), NotificationType.ERROR));
                 LOG.warn("\"Unable to start agent. Reason: \\n\" + e.getMessage()", e);
                 e.printStackTrace();
                 disable();
@@ -178,7 +227,7 @@ public class WeaveAgentRuntimeManager  implements Disposable,ProjectComponent {
                 @Override
                 public void connectedSuccessfully() {
                     indicator.setText2("Agent connected successfully");
-                    Notifications.Bus.notify(new Notification("Data Weave", "Server Started", "Weave Server started and is reachable at port " + finalFreePort, NotificationType.INFORMATION));
+                    Notifications.Bus.notify(new Notification(Notifications.SYSTEM_MESSAGES_GROUP_ID, "Server started", "Weave Server started and is reachable at port " + finalFreePort, NotificationType.INFORMATION));
                     LOG.info("Weave Server started and is reachable at port " + finalFreePort);
                 }
 
@@ -289,7 +338,7 @@ public class WeaveAgentRuntimeManager  implements Disposable,ProjectComponent {
             if (client != null && client.isConnected()) {
                 onConnected.run();
             } else {
-                Notifications.Bus.notify(new Notification("Data Weave", "Unable to connect", "Client is not able to connect to runtime", NotificationType.WARNING));
+                Notifications.Bus.notify(new Notification(Notifications.SYSTEM_MESSAGES_GROUP_ID, "Unable to connect", "Client is not able to connect to runtime", NotificationType.WARNING));
                 LOG.warn("Unable to connect; Client is " + client);
             }
         }
